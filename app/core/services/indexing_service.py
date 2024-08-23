@@ -80,12 +80,33 @@ class KDTree(IndexingAlgorithm):
 
         return search_knn(self.root, query_vector, k)
 
-class IndexingService:
-    def __init__(self, algorithm: IndexingAlgorithm):
-        self.algorithm = algorithm
 
-    def index_chunks(self, chunks: List[Chunk]):
+class IndexingService:
+    def __init__(self, algorithm: str = "linear"):
+        self.set_algorithm(algorithm)
+        self.indexed_chunks: List[Chunk] = []
+
+    def set_algorithm(self, algorithm: str) -> None:
+        if algorithm == "linear":
+            self.algorithm = LinearSearch()
+        elif algorithm == "kd_tree":
+            self.algorithm = KDTree()
+        else:
+            raise ValueError(f"Unsupported algorithm: {algorithm}")
+
+    def index_chunks(self, chunks: List[Chunk]) -> None:
+        self.indexed_chunks = chunks
         self.algorithm.build_index(chunks)
 
     def search(self, query_vector: List[float], k: int) -> List[Tuple[Chunk, float]]:
+        if not self.indexed_chunks:
+            raise ValueError("No chunks have been indexed yet")
         return self.algorithm.search(query_vector, k)
+
+    def add_chunk(self, chunk: Chunk) -> None:
+        self.indexed_chunks.append(chunk)
+        self.algorithm.build_index(self.indexed_chunks)  # Re-index with the new chunk
+
+    def remove_chunk(self, chunk_id: str) -> None:
+        self.indexed_chunks = [chunk for chunk in self.indexed_chunks if chunk.id != chunk_id]
+        self.algorithm.build_index(self.indexed_chunks)  # Re-index after removal

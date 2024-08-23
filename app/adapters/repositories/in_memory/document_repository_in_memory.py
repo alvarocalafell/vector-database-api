@@ -1,23 +1,20 @@
-from typing import Dict
+from typing import Dict, List
 from ....ports.repositories.document_repository import DocumentRepository
 from ....core.entities.document import Document
-
-class DocumentRepositoryInMemory(DocumentRepository):
+        
+class InMemoryDocumentRepository(DocumentRepository):
     def __init__(self):
         self.documents: Dict[str, Document] = {}
 
-    def create(self, document: Document) -> Document:
+    def save(self, document: Document) -> Document:
         self.documents[document.id] = document
         return document
 
     def get(self, document_id: str) -> Document:
         return self.documents.get(document_id)
 
-    def update(self, document: Document) -> Document:
-        if document.id in self.documents:
-            self.documents[document.id] = document
-            return document
-        return None
-
-    def delete(self, document_id: str):
+    def delete(self, document_id: str) -> None:
         self.documents.pop(document_id, None)
+
+    def list(self, library_id: str) -> List[Document]:
+        return [doc for doc in self.documents.values() if doc.library_id == library_id]
