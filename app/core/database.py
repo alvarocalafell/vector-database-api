@@ -179,6 +179,7 @@ class VectorDatabase:
             finally:
                 logger.debug(f"Releasing lock for delete_document: library {library_id}, document {document_id}")
 
+
     def knn_search(self, library_id: str, query_vector: List[float], k: int) -> List[Tuple[Chunk, float]]:
         logger.debug(f"Entering knn_search method for library {library_id}")
         with self.lock:
