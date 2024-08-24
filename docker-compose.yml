@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  vector-db-api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+    environment:
+      - COHERE_API_KEY=A1Fi5KBBNoekwBPIa833CBScs6Z2mHEtOXxr52KO

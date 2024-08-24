@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple
 import threading
 from ..models.data_models import Chunk, Document, Library
-from ..services.indexing import VectorIndex, KDTree
+from ..services.indexing import VectorIndex, KDTree, BallTree, BruteForce
 import numpy as np
 import logging
 import time
@@ -14,7 +14,7 @@ class VectorDatabase:
     def __init__(self):
         self.libraries: Dict[str, Library] = {}
         self.index: Dict[str, VectorIndex] = {}
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
 
     def get_library(self, library_id: str) -> Library:
         logger.debug(f"Entering get_library method for library {library_id}")
@@ -37,7 +37,7 @@ class VectorDatabase:
                 logger.error(f"Library with id {library.id} already exists")
                 raise ValueError(f"Library with id {library.id} already exists")
             self.libraries[library.id] = library
-            self.index[library.id] = KDTree()
+            self.index[library.id] = BruteForce()
             logger.debug(f"Created library: {library}")
 
     def add_document(self, library_id: str, document: Document) -> None:
@@ -56,7 +56,7 @@ class VectorDatabase:
                 # Rebuild the index with all vectors
                 all_vectors = [chunk.embedding for doc in library.documents for chunk in doc.chunks]
                 if all_vectors:
-                    self.index[library_id] = KDTree()
+                    self.index[library_id] = BruteForce()
                     self.index[library_id].build(all_vectors)
                     logger.debug(f"Index rebuilt with {len(all_vectors)} vectors of dimension {len(all_vectors[0])}")
                 else:
@@ -77,8 +77,8 @@ class VectorDatabase:
         logger.debug(f"Number of vectors to index: {len(vectors)}")
         start_time = time.time()
         if library_id not in self.index:
-            logger.debug(f"Creating new KDTree for library {library_id}")
-            self.index[library_id] = KDTree()
+            logger.debug(f"Creating new BruteForce for library {library_id}")
+            self.index[library_id] = BruteForce()
         logger.debug("Building index")
         self.index[library_id].build(vectors)
         logger.debug(f"Time to build index: {time.time() - start_time:.2f} seconds")
@@ -218,3 +218,46 @@ class VectorDatabase:
         logger.debug(f"Checking if library {library_id} exists")
         with self.lock:
             return library_id in self.libraries
+        
+    def add_chunk(self, library_id: str, document_id: str, chunk: Chunk) -> Chunk:
+        with self.lock:
+            library = self.get_library(library_id)
+            document = next((doc for doc in library.documents if doc.id == document_id), None)
+            if not document:
+                raise ValueError(f"Document {document_id} not found in library {library_id}")
+            document.chunks.append(chunk)
+            self._rebuild_index(library_id)
+            return chunk
+
+    def get_chunk(self, library_id: str, document_id: str, chunk_id: str) -> Chunk:
+        with self.lock:
+            library = self.get_library(library_id)
+            document = next((doc for doc in library.documents if doc.id == document_id), None)
+            if not document:
+                raise ValueError(f"Document {document_id} not found in library {library_id}")
+            chunk = next((chunk for chunk in document.chunks if chunk.id == chunk_id), None)
+            if not chunk:
+                raise ValueError(f"Chunk {chunk_id} not found in document {document_id}")
+            return chunk
+
+    def update_chunk(self, library_id: str, document_id: str, chunk_id: str, updated_chunk: Chunk) -> Chunk:
+        with self.lock:
+            library = self.get_library(library_id)
+            document = next((doc for doc in library.documents if doc.id == document_id), None)
+            if not document:
+                raise ValueError(f"Document {document_id} not found in library {library_id}")
+            for i, chunk in enumerate(document.chunks):
+                if chunk.id == chunk_id:
+                    document.chunks[i] = updated_chunk
+                    self._rebuild_index(library_id)
+                    return updated_chunk
+            raise ValueError(f"Chunk {chunk_id} not found in document {document_id}")
+
+    def delete_chunk(self, library_id: str, document_id: str, chunk_id: str) -> None:
+        with self.lock:
+            library = self.get_library(library_id)
+            document = next((doc for doc in library.documents if doc.id == document_id), None)
+            if not document:
+                raise ValueError(f"Document {document_id} not found in library {library_id}")
+            document.chunks = [chunk for chunk in document.chunks if chunk.id != chunk_id]
+            self._rebuild_index(library_id)

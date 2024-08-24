@@ -1,0 +1,23 @@
+replicaCount: 1
+
+image:
+  repository: vector-db-api
+  pullPolicy: Never
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 80
+
+ingress:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+cohereApiKey: A1Fi5KBBNoekwBPIa833CBScs6Z2mHEtOXxr52KO

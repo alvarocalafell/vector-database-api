@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vector-db-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vector-db-api
+  template:
+    metadata:
+      labels:
+        app: vector-db-api
+    spec:
+      containers:
+      - name: vector-db-api
+        image: vector-db-api:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: COHERE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cohere-api-secret
+              key: api-key
+        envFrom:
+        - configMapRef:
+            name: vector-db-api-config

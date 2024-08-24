@@ -52,3 +52,12 @@ def sample_document():
             "author": "Test Author"
         }
     }
+
+@pytest.fixture
+def sample_chunk():
+    return {
+        "id": "test-chunk",
+        "text": "This is a test chunk",
+        "embedding": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "metadata": {"position": 1}
+    }
