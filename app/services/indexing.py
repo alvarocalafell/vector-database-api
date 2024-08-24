@@ -141,3 +141,17 @@ class BallTree(VectorIndex):
 
         results = knn_search(self.root, query, k)
         return [(r[1], -r[0]) for r in results]
+
+class BruteForce(VectorIndex):
+    def __init__(self):
+        self.vectors = []
+
+    def build(self, vectors: List[np.ndarray]) -> None:
+        logger.debug(f"Building BruteForce index with {len(vectors)} vectors")
+        self.vectors = vectors
+
+    def search(self, query: np.ndarray, k: int) -> List[Tuple[int, float]]:
+        logger.debug(f"Performing BruteForce search for {k} nearest neighbors")
+        distances = [(i, np.linalg.norm(query - vec)) for i, vec in enumerate(self.vectors)]
+        distances.sort(key=lambda x: x[1])
+        return distances[:k]

@@ -179,12 +179,6 @@ class VectorDatabase:
             finally:
                 logger.debug(f"Releasing lock for delete_document: library {library_id}, document {document_id}")
 
-
-    def _rebuild_index(self, library_id: str) -> None:
-        library = self.libraries[library_id]
-        vectors = [chunk.embedding for doc in library.documents for chunk in doc.chunks]
-        self.index[library_id].build(vectors)
-
     def knn_search(self, library_id: str, query_vector: List[float], k: int) -> List[Tuple[Chunk, float]]:
         logger.debug(f"Entering knn_search method for library {library_id}")
         with self.lock:
