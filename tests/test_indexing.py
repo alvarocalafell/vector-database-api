@@ -2,42 +2,42 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def test_index_rebuilt_on_document_operations(client, vector_db, sample_library, sample_document):
+def test_index_rebuilt_on_document_operations(api_client, vector_db, sample_library, sample_document):
     # Create the library first
-    response = client.post("/libraries/", json=sample_library)
+    response = api_client.post("/libraries/", json=sample_library)
     assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Add document
-    response = client.post(f"/documents/{sample_library['id']}", json=sample_document)
+    response = api_client.post(f"/documents/{sample_library['id']}", json=sample_document)
     assert response.status_code == 201, f"Failed to add document: {response.json()}"
     assert vector_db.index[sample_library['id']] is not None
     
     # Update document
     updated_document = {**sample_document, "chunks": [{"id": "chunk-2", "text": "New chunk", "embedding": [0.5, 0.4, 0.3, 0.2, 0.1]}]}
-    response = client.put(f"/documents/{sample_library['id']}/{sample_document['id']}", json=updated_document)
+    response = api_client.put(f"/documents/{sample_library['id']}/{sample_document['id']}", json=updated_document)
     assert response.status_code == 200, f"Failed to update document: {response.json()}"
     assert vector_db.index[sample_library['id']] is not None
     
     # Delete document
-    response = client.delete(f"/documents/{sample_library['id']}/{sample_document['id']}")
+    response = api_client.delete(f"/documents/{sample_library['id']}/{sample_document['id']}")
     assert response.status_code == 200, f"Failed to delete document: {response.json()}"
     assert vector_db.index[sample_library['id']] is not None
 
-def test_knn_search_various_k(client, vector_db, sample_library, sample_document):
-    client.post("/libraries/", json=sample_library)
-    client.post(f"/documents/{sample_library['id']}", json=sample_document)
+def test_knn_search_various_k(api_client, vector_db, sample_library, sample_document):
+    api_client.post("/libraries/", json=sample_library)
+    api_client.post(f"/documents/{sample_library['id']}", json=sample_document)
     
     for k in [1, 3, 5]:
         search_query = {
             "query_vector": [0.1, 0.2, 0.3, 0.4, 0.5],
             "k": k
         }
-        response = client.post(f"/search/{sample_library['id']}", json=search_query)
+        response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
         assert response.status_code == 200
         assert len(response.json()) <= k
     
-def test_search_results_order(client, vector_db, sample_library):
-    client.post("/libraries/", json=sample_library)
+def test_search_results_order(api_client, vector_db, sample_library):
+    api_client.post("/libraries/", json=sample_library)
 
     documents = [
         {"id": "doc1", "chunks": [{"id": "chunk1", "text": "Chunk 1", "embedding": [0.1, 0.1]}]},
@@ -46,14 +46,14 @@ def test_search_results_order(client, vector_db, sample_library):
     ]
 
     for doc in documents:
-        response = client.post(f"/documents/{sample_library['id']}", json=doc)
+        response = api_client.post(f"/documents/{sample_library['id']}", json=doc)
         assert response.status_code == 201, f"Failed to add document: {response.json()}"
 
     search_query = {
         "query_vector": [0.15, 0.15],
         "k": 3
     }
-    response = client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
     assert response.status_code == 200
     results = response.json()
     print(f"Search results: {results}")

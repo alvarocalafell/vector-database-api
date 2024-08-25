@@ -3,7 +3,7 @@ from typing import Dict, Any
 from pydantic import BaseModel, Field, constr
 from app.models.data_models import Library
 from app.core.database import VectorDatabase
-from app.api.dependencies import get_vector_db
+from app.api.v1.dependencies import get_vector_db
 from app.core.exceptions import LibraryNotFoundException, DuplicateLibraryException
 import logging
 
@@ -27,7 +27,7 @@ class LibraryUpdate(BaseModel):
 @router.post("/", response_model=Library, status_code=201)
 async def create_library(
     library: LibraryCreate,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Library:
     """
     Create a new library in the vector database.
@@ -57,7 +57,7 @@ async def create_library(
 @router.get("/{library_id}", response_model=Library)
 async def get_library(
     library_id: str,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Library:
     """
     Retrieve a library from the vector database.
@@ -87,7 +87,7 @@ async def get_library(
 async def update_library(
     library_id: str,
     library_update: LibraryUpdate,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Library:
     """
     Update an existing library in the vector database.
@@ -119,7 +119,7 @@ async def update_library(
 @router.delete("/{library_id}")
 async def delete_library(
     library_id: str,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Dict[str, str]:
     """
     Delete a library from the vector database.

@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from app.models.data_models import Chunk
 from app.core.database import VectorDatabase
-from app.api.dependencies import get_vector_db
+from app.api.v1.dependencies import get_vector_db
 from app.core.exceptions import LibraryNotFoundException, DocumentNotFoundException, ChunkNotFoundException
 import logging
 
@@ -28,7 +28,7 @@ async def create_chunk(
     library_id: str,
     document_id: str,
     chunk: ChunkCreate,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Chunk:
     """
     Create a new chunk in a document within a library in the vector database.
@@ -62,7 +62,7 @@ async def get_chunk(
     library_id: str,
     document_id: str,
     chunk_id: str,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Chunk:
     """
     Retrieve a chunk from a document within a library in the vector database.
@@ -96,7 +96,7 @@ async def update_chunk(
     document_id: str,
     chunk_id: str,
     chunk_update: ChunkUpdate,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Chunk:
     """
     Update an existing chunk in a document within a library in the vector database.
@@ -145,7 +145,7 @@ async def delete_chunk(
     library_id: str,
     document_id: str,
     chunk_id: str,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Dict[str, str]:
     """
     Delete a chunk from a document within a library in the vector database.

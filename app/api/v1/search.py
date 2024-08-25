@@ -1,9 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from pydantic import BaseModel, Field, conint
-from app.models.data_models import Chunk
+from app.models.data_models import SearchQuery, SearchResult
 from app.core.database import VectorDatabase
-from app.api.dependencies import get_vector_db
+from app.api.v1.dependencies import get_vector_db
 from app.core.exceptions import LibraryNotFoundException
 import logging
 
@@ -11,19 +10,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-class SearchQuery(BaseModel):
-    query_vector: List[float] = Field(..., description="The query vector to search for")
-    k: conint(gt=0) = Field(..., description="The number of nearest neighbors to return")
-
-class SearchResult(BaseModel):
-    chunk: Chunk
-    distance: float
-
 @router.post("/{library_id}", response_model=List[SearchResult])
 async def knn_search(
     library_id: str,
     search_query: SearchQuery,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> List[SearchResult]:
     """
     Perform a k-nearest neighbor search in the specified library.
@@ -61,7 +52,7 @@ async def knn_search(
 async def cosine_similarity_search(
     library_id: str,
     search_query: SearchQuery,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> List[SearchResult]:
     """
     Perform a cosine similarity search in the specified library.

@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from app.models.data_models import Document, Chunk
 from app.core.database import VectorDatabase
-from app.api.dependencies import get_vector_db
+from app.api.v1.dependencies import get_vector_db
 from app.core.exceptions import LibraryNotFoundException, DocumentNotFoundException
 import logging
 
@@ -30,7 +30,7 @@ class DocumentUpdate(BaseModel):
 async def add_document(
     library_id: str,
     document: DocumentCreate,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Document:
     """
     Add a new document to a library in the vector database.
@@ -66,7 +66,7 @@ async def add_document(
 async def get_document(
     library_id: str,
     document_id: str,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Document:
     """
     Retrieve a document from a library in the vector database.
@@ -98,7 +98,7 @@ async def update_document(
     library_id: str,
     document_id: str,
     document_update: DocumentUpdate,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Document:
     """
     Update an existing document in a library in the vector database.
@@ -136,7 +136,7 @@ async def update_document(
 async def delete_document(
     library_id: str,
     document_id: str,
-    vector_db: VectorDatabase = Depends(get_vector_db)
+    vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Dict[str, str]:
     """
     Delete a document from a library in the vector database.

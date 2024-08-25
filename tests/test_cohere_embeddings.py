@@ -1,17 +1,8 @@
 import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-from app.core.database import VectorDatabase
 from .utils import get_cohere_embedding
 import logging
 
 logger = logging.getLogger(__name__)
-
-client = TestClient(app)
-
-@pytest.fixture
-def vector_db():
-    return VectorDatabase()
 
 @pytest.fixture
 def sample_library():
@@ -24,11 +15,11 @@ def sample_library():
         }
     }
 
-def test_add_and_search_with_cohere_embeddings(client, vector_db, sample_library):
+def test_add_and_search_with_cohere_embeddings(api_client, vector_db, sample_library):
     logger.debug("Starting test_add_and_search_with_cohere_embeddings")
     
     # Create a library
-    response = client.post("/libraries/", json=sample_library)
+    response = api_client.post("/libraries/", json=sample_library)
     assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Create documents with Cohere embeddings
@@ -48,7 +39,7 @@ def test_add_and_search_with_cohere_embeddings(client, vector_db, sample_library
             }],
             
         }
-        response = client.post(f"/documents/{sample_library['id']}", json=document)
+        response = api_client.post(f"/documents/{sample_library['id']}", json=document)
         assert response.status_code == 201, f"Failed to add document: {response.json()}"
     
     # Perform a search
@@ -59,7 +50,7 @@ def test_add_and_search_with_cohere_embeddings(client, vector_db, sample_library
         "k": 2
     }
     
-    response = client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
     assert response.status_code == 200, f"Search failed: {response.json()}"
     
     results = response.json()
@@ -71,11 +62,11 @@ def test_add_and_search_with_cohere_embeddings(client, vector_db, sample_library
     
     logger.debug("Finished test_add_and_search_with_cohere_embeddings")
 
-def test_update_document_with_cohere_embeddings(client, vector_db, sample_library):
+def test_update_document_with_cohere_embeddings(api_client, vector_db, sample_library):
     logger.debug("Starting test_update_document_with_cohere_embeddings")
     
     # Create a library
-    response = client.post("/libraries/", json=sample_library)
+    response = api_client.post("/libraries/", json=sample_library)
     assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Create a document with Cohere embedding
@@ -91,7 +82,7 @@ def test_update_document_with_cohere_embeddings(client, vector_db, sample_librar
         }],
         "metadata": {"original": True}
     }
-    response = client.post(f"/documents/{sample_library['id']}", json=document)
+    response = api_client.post(f"/documents/{sample_library['id']}", json=document)
     assert response.status_code == 201, f"Failed to add document: {response.json()}"
     
     # Update the document with a new embedding
@@ -107,7 +98,7 @@ def test_update_document_with_cohere_embeddings(client, vector_db, sample_librar
         }],
         "metadata": {"updated": True}
     }
-    response = client.put(f"/documents/{sample_library['id']}/doc-1", json=updated_document)
+    response = api_client.put(f"/documents/{sample_library['id']}/doc-1", json=updated_document)
     assert response.status_code == 200, f"Failed to update document: {response.json()}"
     
     # Perform a search with the updated text
@@ -115,7 +106,7 @@ def test_update_document_with_cohere_embeddings(client, vector_db, sample_librar
         "query_vector": updated_embedding,
         "k": 1
     }
-    response = client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
     assert response.status_code == 200, f"Search failed: {response.json()}"
     
     results = response.json()
@@ -124,11 +115,11 @@ def test_update_document_with_cohere_embeddings(client, vector_db, sample_librar
     
     logger.debug("Finished test_update_document_with_cohere_embeddings")
 
-def test_delete_document_with_cohere_embeddings(client, vector_db, sample_library):
+def test_delete_document_with_cohere_embeddings(api_client, vector_db, sample_library):
     logger.debug("Starting test_delete_document_with_cohere_embeddings")
     
     # Create a library
-    response = client.post("/libraries/", json=sample_library)
+    response = api_client.post("/libraries/", json=sample_library)
     assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Create a document with Cohere embedding
@@ -143,11 +134,11 @@ def test_delete_document_with_cohere_embeddings(client, vector_db, sample_librar
             "metadata": {"position": 1}
         }]
     }
-    response = client.post(f"/documents/{sample_library['id']}", json=document)
+    response = api_client.post(f"/documents/{sample_library['id']}", json=document)
     assert response.status_code == 201, f"Failed to add document: {response.json()}"
     
     # Delete the document
-    response = client.delete(f"/documents/{sample_library['id']}/doc-to-delete")
+    response = api_client.delete(f"/documents/{sample_library['id']}/doc-to-delete")
     assert response.status_code == 200, f"Failed to delete document: {response.json()}"
     
     # Attempt to search for the deleted document
@@ -155,7 +146,7 @@ def test_delete_document_with_cohere_embeddings(client, vector_db, sample_librar
         "query_vector": embedding,
         "k": 1
     }
-    response = client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
     assert response.status_code == 200, f"Search failed: {response.json()}"
     
     results = response.json()
