@@ -1,4 +1,5 @@
 import logging
+from app.models.data_models import Library
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +55,23 @@ def test_get_nonexistent_library(client, vector_db):
     assert response.status_code == 404
 
 def test_update_nonexistent_library(client, vector_db, sample_library):
-    response = client.put("/libraries/nonexistent", json=sample_library)
-    assert response.status_code == 404
+    # Test updating a non-existent library
+    nonexistent_id = "nonexistent"
+    updated_library = sample_library.copy()
+    updated_library["id"] = nonexistent_id
+    response = client.put(f"/libraries/{nonexistent_id}", json=updated_library)
+    assert response.status_code == 404, f"Expected 404, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == f"Library with id {nonexistent_id} not found"
 
+    # Test with mismatched IDs
+    existing_library_id = "existing_library"
+    vector_db.create_library(Library(id=existing_library_id, documents=[], metadata={}))
+    mismatched_library = sample_library.copy()
+    mismatched_library["id"] = "mismatched_id"
+    response = client.put(f"/libraries/{existing_library_id}", json=mismatched_library)
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.json()}"
+    assert response.json()["detail"] == "Library ID in path does not match library ID in body"
+    
 def test_delete_nonexistent_library(client, vector_db):
     response = client.delete("/libraries/nonexistent")
     assert response.status_code == 404

@@ -1,28 +1,22 @@
-import logging
 import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
 from app.core.database import VectorDatabase
+from app.api.dependencies import get_vector_db
 
+@pytest.fixture(params=['kdtree', 'balltree', 'bruteforce'])
+def vector_db(request):
+    return VectorDatabase(indexing_algorithm=request.param)
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-
-@pytest.fixture(scope="function")
-def test_app():
+@pytest.fixture
+def test_app(vector_db):
     app = create_app()
+    app.dependency_overrides[get_vector_db] = lambda: vector_db
     return app
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def client(test_app):
     return TestClient(test_app)
-
-@pytest.fixture(scope="function")
-def vector_db(test_app):
-    # Reset the VectorDatabase before each test
-    test_app.state.vector_db = VectorDatabase()
-    return test_app.state.vector_db
 
 @pytest.fixture
 def sample_library():

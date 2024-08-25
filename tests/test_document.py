@@ -150,7 +150,7 @@ def test_update_document_in_nonexistent_library(client, vector_db, sample_docume
     
     logger.debug(f"Received response with status code {response.status_code}")
     assert response.status_code == 404, f"Expected 404, got: {response.status_code}. Response: {response.json()}"
-    assert response.json()["detail"] == f"Library with id {nonexistent_library_id} does not exist", f"Unexpected error message: {response.json()['detail']}"
+    assert response.json()["detail"] == f"Library with id {nonexistent_library_id} not found", f"Unexpected error message: {response.json()['detail']}"
     
     logger.debug("Finished test_update_document_in_nonexistent_library")
 
