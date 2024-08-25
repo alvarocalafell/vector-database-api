@@ -12,33 +12,18 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 def create_app() -> FastAPI:
-    """
-    Create and configure the FastAPI application.
-
-    Returns:
-        FastAPI: The configured FastAPI application instance.
-    """
     logger.info("Starting to create the app")
     
-    # Load configuration
     settings = get_settings()
     
-    # Create FastAPI app
     app = FastAPI(
         title="Vector Database API",
         description="API for managing and searching vector embeddings",
         version="1.0.0",
         docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_tags=[
-        {"name": "libraries", "description": "Operations with libraries"},
-        {"name": "documents", "description": "Operations with documents"},
-        {"name": "chunks", "description": "Operations with chunks"},
-        {"name": "search", "description": "Search operations"},
-    ]
+        redoc_url="/redoc"
     )
     
-    # Configure CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
@@ -47,33 +32,16 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     
-    # Initialize VectorDatabase
     logger.info(f"Initializing VectorDatabase with {settings.INDEXING_ALGORITHM} algorithm")
     vector_db = VectorDatabase(indexing_algorithm=settings.INDEXING_ALGORITHM)
     app.state.vector_db = vector_db
-    
-    # API v1
-    v1 = FastAPI(openapi_prefix="/api/v1")
-    v1.state.main_app = app  # Store reference to main app
-    v1.include_router(libraries.router, prefix="/libraries", tags=["libraries"])
-    v1.include_router(documents.router, prefix="/documents", tags=["documents"])
-    v1.include_router(chunks.router, prefix="/chunks", tags=["chunks"])
-    v1.include_router(search.router, prefix="/search", tags=["search"])
 
-    app.mount("/api/v1", v1)
+    # Include v1 routers directly in the main app
+    app.include_router(libraries.router, prefix="/api/v1/libraries", tags=["libraries"])
+    app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
+    app.include_router(chunks.router, prefix="/api/v1/chunks", tags=["chunks"])
+    app.include_router(search.router, prefix="/api/v1/search", tags=["search"])
     
-    # For future versions:
-    # v2 = FastAPI(openapi_prefix="/api/v2")
-    # app.mount("/api/v2", v2)
-    
-    # # Include routers
-    # logger.info("Including API routers")
-    # app.include_router(libraries.router, prefix="/libraries", tags=["libraries"])
-    # app.include_router(documents.router, prefix="/documents", tags=["documents"])
-    # app.include_router(chunks.router, prefix="/chunks", tags=["chunks"])
-    # app.include_router(search.router, prefix="/search", tags=["search"])
-    
-    # Add exception handlers
     @app.exception_handler(VectorDatabaseException)
     async def vector_database_exception_handler(request: Request, exc: VectorDatabaseException):
         logger.error(f"VectorDatabaseException: {exc.detail}")
@@ -90,7 +58,6 @@ def create_app() -> FastAPI:
             content={"detail": "An unexpected error occurred. Please try again later."},
         )
     
-    # Add root endpoint
     @app.get("/", response_class=HTMLResponse)
     async def root():
         logger.info("Serving root endpoint")
@@ -106,10 +73,10 @@ def create_app() -> FastAPI:
                 <ul>
                     <li><a href="/docs">/docs</a> - Interactive API documentation</li>
                     <li><a href="/redoc">/redoc</a> - Alternative API documentation</li>
-                    <li>/libraries - Manage libraries</li>
-                    <li>/documents - Manage documents</li>
-                    <li>/chunks - Manage chunks</li>
-                    <li>/search - Perform vector searches</li>
+                    <li>/api/v1/libraries - Manage libraries</li>
+                    <li>/api/v1/documents - Manage documents</li>
+                    <li>/api/v1/chunks - Manage chunks</li>
+                    <li>/api/v1/search - Perform vector searches</li>
                 </ul>
             </body>
         </html>

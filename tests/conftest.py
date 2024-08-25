@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
 from app.core.database import VectorDatabase
-from app.api.v1.dependencies import get_vector_db
 
 class VersionedAPIClient:
     def __init__(self, client, version):
@@ -41,6 +40,10 @@ def client(test_app):
 @pytest.fixture(params=['v1'])  # Add 'v2' here when v2 is implemented
 def api_client(request, client):
     return VersionedAPIClient(client, request.param)
+
+@pytest.fixture(params=['knn', 'cosine'])
+def search_method(request):
+    return request.param
 
 @pytest.fixture
 def sample_library():

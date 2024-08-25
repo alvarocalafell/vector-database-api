@@ -22,6 +22,38 @@ class ChunkUpdate(BaseModel):
     text: str = Field(..., description="Updated text content of the chunk")
     embedding: List[float] = Field(..., description="Updated vector embedding of the chunk")
     metadata: Dict[str, Any] = Field(..., description="Updated metadata for the chunk")
+    
+@router.get("/{library_id}/{document_id}", response_model=List[Chunk])
+async def list_chunks(
+    library_id: str,
+    document_id: str,
+    vector_db: VectorDatabase = Depends(get_vector_db())
+) -> List[Chunk]:
+    """
+    List all chunks in a document.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document to list chunks from.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        List[Chunk]: A list of all chunks in the specified document.
+
+    Raises:
+        HTTPException: If the library or document is not found, or there's an error retrieving the chunks.
+    """
+    try:
+        chunks = vector_db.list_chunks(library_id, document_id)
+        logger.info(f"Retrieved {len(chunks)} chunks from document: {document_id} in library: {library_id}")
+        return chunks
+    except (LibraryNotFoundException, DocumentNotFoundException) as e:
+        logger.error(f"Failed to list chunks: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error while listing chunks: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while listing the chunks")
+
 
 @router.post("/{library_id}/{document_id}", response_model=Chunk, status_code=201)
 async def create_chunk(

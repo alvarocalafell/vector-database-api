@@ -32,7 +32,7 @@ def get_vector_db() -> Callable[[Request], VectorDatabase]:
         Raises:
             AttributeError: If the VectorDatabase instance is not found in the app state.
         """
-        db = request.app.state.main_app.state.vector_db
+        db = request.app.state.vector_db
         if not isinstance(db, VectorDatabase):
             raise AttributeError("VectorDatabase instance not found in app state")
         return db

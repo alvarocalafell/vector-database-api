@@ -15,8 +15,8 @@ def sample_library():
         }
     }
 
-def test_add_and_search_with_cohere_embeddings(api_client, vector_db, sample_library):
-    logger.debug("Starting test_add_and_search_with_cohere_embeddings")
+def test_add_and_search_with_cohere_embeddings(api_client, vector_db, sample_library, search_method):
+    logger.debug(f"Starting test_add_and_search_with_cohere_embeddings with {search_method}")
     
     # Create a library
     response = api_client.post("/libraries/", json=sample_library)
@@ -50,7 +50,7 @@ def test_add_and_search_with_cohere_embeddings(api_client, vector_db, sample_lib
         "k": 2
     }
     
-    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}/{search_method}", json=search_query)
     assert response.status_code == 200, f"Search failed: {response.json()}"
     
     results = response.json()
@@ -60,10 +60,11 @@ def test_add_and_search_with_cohere_embeddings(api_client, vector_db, sample_lib
     # Verify that the results are sorted by distance
     assert results[0]['distance'] <= results[1]['distance'], "Results are not sorted by distance"
     
-    logger.debug("Finished test_add_and_search_with_cohere_embeddings")
+    logger.debug(f"Finished test_add_and_search_with_cohere_embeddings with {search_method}")
 
-def test_update_document_with_cohere_embeddings(api_client, vector_db, sample_library):
-    logger.debug("Starting test_update_document_with_cohere_embeddings")
+
+def test_update_document_with_cohere_embeddings(api_client, vector_db, sample_library, search_method):
+    logger.debug("Starting test_update_document_with_cohere_embeddings with {search_method}")
     
     # Create a library
     response = api_client.post("/libraries/", json=sample_library)
@@ -106,17 +107,17 @@ def test_update_document_with_cohere_embeddings(api_client, vector_db, sample_li
         "query_vector": updated_embedding,
         "k": 1
     }
-    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}/{search_method}", json=search_query)
     assert response.status_code == 200, f"Search failed: {response.json()}"
     
     results = response.json()
     assert len(results) == 1, f"Expected 1 result, got {len(results)}"
     assert results[0]['chunk']['text'] == updated_text, f"Unexpected search result: {results[0]}"
     
-    logger.debug("Finished test_update_document_with_cohere_embeddings")
+    logger.debug("Finished test_update_document_with_cohere_embeddings with {search_method}")
 
-def test_delete_document_with_cohere_embeddings(api_client, vector_db, sample_library):
-    logger.debug("Starting test_delete_document_with_cohere_embeddings")
+def test_delete_document_with_cohere_embeddings(api_client, vector_db, sample_library, search_method):
+    logger.debug("Starting test_delete_document_with_cohere_embeddings with {search_method}")
     
     # Create a library
     response = api_client.post("/libraries/", json=sample_library)
@@ -146,7 +147,7 @@ def test_delete_document_with_cohere_embeddings(api_client, vector_db, sample_li
         "query_vector": embedding,
         "k": 1
     }
-    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}/{search_method}", json=search_query)
     assert response.status_code == 200, f"Search failed: {response.json()}"
     
     results = response.json()

@@ -39,6 +39,15 @@ class VectorDatabase:
         self.index: Dict[str, IndexingAlgorithm] = {}
         self.lock: threading.RLock = threading.RLock()
         self.indexing_algorithm: str = indexing_algorithm
+        
+    def list_libraries(self) -> List[Library]:
+        """
+        Retrieve a list of all libraries in the database.
+        """
+        with self.lock:
+            libraries = list(self.libraries.values())
+            logger.info(f"Retrieved {len(libraries)} libraries")
+            return libraries
 
     def create_library(self, library: Library) -> None:
         """
@@ -117,6 +126,24 @@ class VectorDatabase:
             del self.libraries[library_id]
             del self.index[library_id]
             logger.info(f"Deleted library: {library_id}")
+            
+    def list_documents(self, library_id: str) -> List[Document]:
+        """
+        List all documents in a library.
+
+        Args:
+            library_id (str): The ID of the library to list documents from.
+
+        Returns:
+            List[Document]: A list of all documents in the specified library.
+
+        Raises:
+            LibraryNotFoundException: If the library does not exist.
+        """
+        with self.lock:
+            library = self.get_library(library_id)
+            logger.info(f"Retrieved {len(library.documents)} documents from library {library_id}")
+            return library.documents
 
     def add_document(self, library_id: str, document: Document) -> None:
         """
@@ -207,6 +234,26 @@ class VectorDatabase:
             self._rebuild_index(library_id)
             logger.info(f"Deleted document {document_id} from library {library_id}")
 
+    def list_chunks(self, library_id: str, document_id: str) -> List[Chunk]:
+        """
+        List all chunks in a document.
+
+        Args:
+            library_id (str): The ID of the library containing the document.
+            document_id (str): The ID of the document to list chunks from.
+
+        Returns:
+            List[Chunk]: A list of all chunks in the specified document.
+
+        Raises:
+            LibraryNotFoundException: If the library does not exist.
+            DocumentNotFoundException: If the document does not exist in the library.
+        """
+        with self.lock:
+            document = self.get_document(library_id, document_id)
+            logger.info(f"Retrieved {len(document.chunks)} chunks from document {document_id} in library {library_id}")
+            return document.chunks
+    
     def add_chunk(self, library_id: str, document_id: str, chunk: Chunk) -> Chunk:
         """
         Add a chunk to a document in a library.
@@ -339,6 +386,53 @@ class VectorDatabase:
             results = self.index[library_id].search(np.array(query_vector), k)
             logger.info(f"Performed knn search in library {library_id} with k={k}")
             return [(chunks[idx], dist) for idx, dist in results]
+    
+    def cosine_similarity_search(self, library_id: str, query_vector: List[float], k: int) -> List[Tuple[Chunk, float]]:
+        """
+        Perform a cosine similarity search in the specified library.
+
+        Args:
+            library_id (str): The ID of the library to search in.
+            query_vector (List[float]): The query vector to search for.
+            k (int): The number of most similar vectors to return.
+
+        Returns:
+            List[Tuple[Chunk, float]]: A list of tuples containing the k most similar chunks and their cosine similarities.
+
+        Raises:
+            LibraryNotFoundException: If the library does not exist.
+        """
+        with self.lock:
+            library = self.get_library(library_id)
+            chunks = [chunk for doc in library.documents for chunk in doc.chunks]
+            if not chunks:
+                logger.warning(f"No chunks found in library {library_id} for cosine similarity search")
+                return []
+            
+            if library_id not in self.index:
+                self._rebuild_index(library_id)
+            
+            # Convert query vector to numpy array and normalize it
+            query_vector_np = np.array(query_vector)
+            query_vector_norm = query_vector_np / np.linalg.norm(query_vector_np)
+            
+            # Perform nearest neighbor search using the index
+            nearest_neighbors = self.index[library_id].search(query_vector_norm, k)
+            
+            # Compute cosine similarities for the nearest neighbors
+            results = []
+            for idx, _ in nearest_neighbors:
+                chunk = chunks[idx]
+                chunk_vector = np.array(chunk.embedding)  # Use 'embedding' instead of 'vector'
+                chunk_vector_norm = chunk_vector / np.linalg.norm(chunk_vector)
+                cosine_similarity = np.dot(query_vector_norm, chunk_vector_norm)
+                results.append((chunk, cosine_similarity))
+            
+            # Sort results by cosine similarity (highest to lowest)
+            results.sort(key=lambda x: x[1], reverse=True)
+            
+            logger.info(f"Performed cosine similarity search in library {library_id} with k={k}")
+            return results[:k]  # Return top k results
 
     def _rebuild_index(self, library_id: str) -> None:
         """

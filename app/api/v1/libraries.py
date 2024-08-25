@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict, Any
+from typing import Dict, Any, List
 from pydantic import BaseModel, Field, constr
 from app.models.data_models import Library
 from app.core.database import VectorDatabase
@@ -53,6 +53,22 @@ async def create_library(
     except Exception as e:
         logger.error(f"Unexpected error while creating library: {str(e)}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred while creating the library")
+
+@router.get("/", response_model=List[Library])
+async def list_libraries(
+    vector_db: VectorDatabase = Depends(get_vector_db())
+):
+    """
+    Retrieve a list of all libraries.
+    """
+    try:
+        libraries = vector_db.list_libraries()
+        logger.info(f"Retrieved {len(libraries)} libraries")
+        return libraries
+    except Exception as e:
+        logger.error(f"Error retrieving libraries: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while retrieving libraries")
+
 
 @router.get("/{library_id}", response_model=Library)
 async def get_library(

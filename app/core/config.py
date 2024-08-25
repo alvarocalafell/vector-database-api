@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     INDEXING_ALGORITHM: str = "kdtree"
-    ALLOWED_ORIGINS: list = ["http://localhost", "http://localhost:8080"]
+    ALLOWED_ORIGINS: list = ["http://localhost", "http://localhost:8000"]
     COHERE_API_KEY: str
 
     class Config:

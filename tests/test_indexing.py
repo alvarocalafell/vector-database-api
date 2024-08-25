@@ -23,7 +23,7 @@ def test_index_rebuilt_on_document_operations(api_client, vector_db, sample_libr
     assert response.status_code == 200, f"Failed to delete document: {response.json()}"
     assert vector_db.index[sample_library['id']] is not None
 
-def test_knn_search_various_k(api_client, vector_db, sample_library, sample_document):
+def test_knn_search_various_k(api_client, vector_db, sample_library, sample_document, search_method):
     api_client.post("/libraries/", json=sample_library)
     api_client.post(f"/documents/{sample_library['id']}", json=sample_document)
     
@@ -32,11 +32,11 @@ def test_knn_search_various_k(api_client, vector_db, sample_library, sample_docu
             "query_vector": [0.1, 0.2, 0.3, 0.4, 0.5],
             "k": k
         }
-        response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
+        response = api_client.post(f"/search/{sample_library['id']}/{search_method}", json=search_query)
         assert response.status_code == 200
         assert len(response.json()) <= k
     
-def test_search_results_order(api_client, vector_db, sample_library):
+def test_search_results_order(api_client, vector_db, sample_library, search_method):
     api_client.post("/libraries/", json=sample_library)
 
     documents = [
@@ -53,7 +53,7 @@ def test_search_results_order(api_client, vector_db, sample_library):
         "query_vector": [0.15, 0.15],
         "k": 3
     }
-    response = api_client.post(f"/search/{sample_library['id']}", json=search_query)
+    response = api_client.post(f"/search/{sample_library['id']}/{search_method}", json=search_query)
     assert response.status_code == 200
     results = response.json()
     print(f"Search results: {results}")

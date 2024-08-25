@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from typing import List
+from typing import List, Dict
 from app.models.data_models import SearchQuery, SearchResult
 from app.core.database import VectorDatabase
 from app.api.v1.dependencies import get_vector_db
@@ -10,7 +10,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/{library_id}", response_model=List[SearchResult])
+@router.get("/", response_model=Dict[str, List[str]])
+async def list_search_methods():
+    """
+    List available search methods.
+
+    Returns:
+        Dict[str, List[str]]: A dictionary containing available search methods.
+    """
+    return {
+        "available_methods": ["knn", "cosine"]
+    }
+
+@router.post("/{library_id}/knn", response_model=List[SearchResult])
 async def knn_search(
     library_id: str,
     search_query: SearchQuery,
@@ -47,7 +59,6 @@ async def knn_search(
         logger.error(f"Unexpected error during kNN search: {str(e)}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred during the search")
 
-# Optional: Add an endpoint for cosine similarity search if needed
 @router.post("/{library_id}/cosine", response_model=List[SearchResult])
 async def cosine_similarity_search(
     library_id: str,
@@ -72,7 +83,6 @@ async def cosine_similarity_search(
         HTTPException: If the library is not found or if there's an error during the search process.
     """
     try:
-        # Assuming vector_db has a cosine_similarity_search method
         results = vector_db.cosine_similarity_search(library_id, search_query.query_vector, search_query.k)
         logger.info(f"Performed cosine similarity search in library {library_id} with k={search_query.k}")
         return [SearchResult(chunk=chunk, distance=1 - similarity) for chunk, similarity in results]

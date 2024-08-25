@@ -25,6 +25,36 @@ class DocumentCreate(BaseModel):
 class DocumentUpdate(BaseModel):
     chunks: List[ChunkCreate] = Field(..., description="Updated list of chunks in the document")
     metadata: Dict[str, Any] = Field(..., description="Updated metadata for the document")
+    
+@router.get("/{library_id}", response_model=List[Document])
+async def list_documents(
+    library_id: str,
+    vector_db: VectorDatabase = Depends(get_vector_db())
+) -> List[Document]:
+    """
+    List all documents in a library.
+
+    Args:
+        library_id (str): The ID of the library to list documents from.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        List[Document]: A list of all documents in the specified library.
+
+    Raises:
+        HTTPException: If the library is not found or there's an error retrieving the documents.
+    """
+    try:
+        documents = vector_db.list_documents(library_id)
+        logger.info(f"Retrieved {len(documents)} documents from library: {library_id}")
+        return documents
+    except LibraryNotFoundException as e:
+        logger.error(f"Failed to list documents: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error while listing documents: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while listing the documents")
+
 
 @router.post("/{library_id}", response_model=Document, status_code=201)
 async def add_document(
