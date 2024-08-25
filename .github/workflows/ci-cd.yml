@@ -35,3 +35,4 @@ jobs:
         pytest --maxfail=1 --disable-warnings
       env:
         PYTHONPATH: ${{ github.workspace }}
+        COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
