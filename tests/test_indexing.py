@@ -2,30 +2,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# def test_index_rebuilt_on_document_operations(client, vector_db, sample_library, sample_document):
-#     client.post("/libraries/", json=sample_library)
-    
-#     # Add document
-#     client.post(f"/documents/{sample_library['id']}", json=sample_document)
-#     assert vector_db.index[sample_library['id']] is not None
-    
-#     # Update document
-#     updated_document = {**sample_document, "chunks": [{"id": "chunk-2", "text": "New chunk", "embedding": [0.5, 0.4, 0.3, 0.2, 0.1]}]}
-#     client.put(f"/documents/{sample_library['id']}/{sample_document['id']}", json=updated_document)
-#     assert vector_db.index[sample_library['id']] is not None
-    
-#     # Delete document
-#     client.delete(f"/documents/{sample_library['id']}/{sample_document['id']}")
-#     assert vector_db.index[sample_library['id']] is not None
-
 def test_index_rebuilt_on_document_operations(client, vector_db, sample_library, sample_document):
     # Create the library first
     response = client.post("/libraries/", json=sample_library)
-    assert response.status_code == 200, f"Failed to create library: {response.json()}"
+    assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Add document
     response = client.post(f"/documents/{sample_library['id']}", json=sample_document)
-    assert response.status_code == 200, f"Failed to add document: {response.json()}"
+    assert response.status_code == 201, f"Failed to add document: {response.json()}"
     assert vector_db.index[sample_library['id']] is not None
     
     # Update document
@@ -63,7 +47,7 @@ def test_search_results_order(client, vector_db, sample_library):
 
     for doc in documents:
         response = client.post(f"/documents/{sample_library['id']}", json=doc)
-        assert response.status_code == 200, f"Failed to add document: {response.json()}"
+        assert response.status_code == 201, f"Failed to add document: {response.json()}"
 
     search_query = {
         "query_vector": [0.15, 0.15],

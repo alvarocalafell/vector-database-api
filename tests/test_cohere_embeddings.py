@@ -29,7 +29,7 @@ def test_add_and_search_with_cohere_embeddings(client, vector_db, sample_library
     
     # Create a library
     response = client.post("/libraries/", json=sample_library)
-    assert response.status_code == 200, f"Failed to create library: {response.json()}"
+    assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Create documents with Cohere embeddings
     texts = ["The quick brown fox jumps over the lazy dog",
@@ -45,10 +45,11 @@ def test_add_and_search_with_cohere_embeddings(client, vector_db, sample_library
                 "text": text,
                 "embedding": embedding,
                 "metadata": {"position": i}
-            }]
+            }],
+            
         }
         response = client.post(f"/documents/{sample_library['id']}", json=document)
-        assert response.status_code == 200, f"Failed to add document: {response.json()}"
+        assert response.status_code == 201, f"Failed to add document: {response.json()}"
     
     # Perform a search
     search_text = "What is the meaning of life?"
@@ -75,7 +76,7 @@ def test_update_document_with_cohere_embeddings(client, vector_db, sample_librar
     
     # Create a library
     response = client.post("/libraries/", json=sample_library)
-    assert response.status_code == 200, f"Failed to create library: {response.json()}"
+    assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Create a document with Cohere embedding
     original_text = "The sky is blue"
@@ -87,10 +88,11 @@ def test_update_document_with_cohere_embeddings(client, vector_db, sample_librar
             "text": original_text,
             "embedding": original_embedding,
             "metadata": {"position": 1}
-        }]
+        }],
+        "metadata": {"original": True}
     }
     response = client.post(f"/documents/{sample_library['id']}", json=document)
-    assert response.status_code == 200, f"Failed to add document: {response.json()}"
+    assert response.status_code == 201, f"Failed to add document: {response.json()}"
     
     # Update the document with a new embedding
     updated_text = "The grass is green"
@@ -102,7 +104,8 @@ def test_update_document_with_cohere_embeddings(client, vector_db, sample_librar
             "text": updated_text,
             "embedding": updated_embedding,
             "metadata": {"position": 1}
-        }]
+        }],
+        "metadata": {"updated": True}
     }
     response = client.put(f"/documents/{sample_library['id']}/doc-1", json=updated_document)
     assert response.status_code == 200, f"Failed to update document: {response.json()}"
@@ -126,7 +129,7 @@ def test_delete_document_with_cohere_embeddings(client, vector_db, sample_librar
     
     # Create a library
     response = client.post("/libraries/", json=sample_library)
-    assert response.status_code == 200, f"Failed to create library: {response.json()}"
+    assert response.status_code == 201, f"Failed to create library: {response.json()}"
     
     # Create a document with Cohere embedding
     text = "This document will be deleted"
@@ -141,7 +144,7 @@ def test_delete_document_with_cohere_embeddings(client, vector_db, sample_librar
         }]
     }
     response = client.post(f"/documents/{sample_library['id']}", json=document)
-    assert response.status_code == 200, f"Failed to add document: {response.json()}"
+    assert response.status_code == 201, f"Failed to add document: {response.json()}"
     
     # Delete the document
     response = client.delete(f"/documents/{sample_library['id']}/doc-to-delete")

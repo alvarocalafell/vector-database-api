@@ -1,78 +1,174 @@
 from fastapi import APIRouter, Depends, HTTPException
+from typing import Dict, Any, List
+from pydantic import BaseModel, Field
 from app.models.data_models import Chunk
 from app.core.database import VectorDatabase
 from app.api.dependencies import get_vector_db
 from app.core.exceptions import LibraryNotFoundException, DocumentNotFoundException, ChunkNotFoundException
 import logging
-import traceback
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/{library_id}/{document_id}", response_model=Chunk)
-async def create_chunk(library_id: str, document_id: str, chunk: Chunk, vector_db: VectorDatabase = Depends(get_vector_db)):
+class ChunkCreate(BaseModel):
+    id: str = Field(..., description="Unique identifier for the chunk")
+    text: str = Field(..., description="Text content of the chunk")
+    embedding: List[float] = Field(..., description="Vector embedding of the chunk")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the chunk")
+
+class ChunkUpdate(BaseModel):
+    id: str = Field(..., description="ID of the chunk")
+    text: str = Field(..., description="Updated text content of the chunk")
+    embedding: List[float] = Field(..., description="Updated vector embedding of the chunk")
+    metadata: Dict[str, Any] = Field(..., description="Updated metadata for the chunk")
+
+@router.post("/{library_id}/{document_id}", response_model=Chunk, status_code=201)
+async def create_chunk(
+    library_id: str,
+    document_id: str,
+    chunk: ChunkCreate,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Chunk:
+    """
+    Create a new chunk in a document within a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document to add the chunk to.
+        chunk (ChunkCreate): The chunk data to be added.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Chunk: The created chunk object.
+
+    Raises:
+        HTTPException: If the library or document is not found, or there's an error creating the chunk.
+    """
     try:
-        created_chunk = vector_db.add_chunk(library_id, document_id, chunk)
+        new_chunk = Chunk(**chunk.dict())
+        created_chunk = vector_db.add_chunk(library_id, document_id, new_chunk)
+        logger.info(f"Chunk created successfully: {chunk.id} in document: {document_id}, library: {library_id}")
         return created_chunk
-    except LibraryNotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except DocumentNotFoundException as e:
+    except (LibraryNotFoundException, DocumentNotFoundException) as e:
+        logger.error(f"Failed to create chunk: {str(e)}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Unexpected error while creating chunk: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while creating the chunk")
 
 @router.get("/{library_id}/{document_id}/{chunk_id}", response_model=Chunk)
-async def get_chunk(library_id: str, document_id: str, chunk_id: str, vector_db: VectorDatabase = Depends(get_vector_db)):
+async def get_chunk(
+    library_id: str,
+    document_id: str,
+    chunk_id: str,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Chunk:
+    """
+    Retrieve a chunk from a document within a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document containing the chunk.
+        chunk_id (str): The ID of the chunk to retrieve.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Chunk: The requested chunk object.
+
+    Raises:
+        HTTPException: If the library, document, or chunk is not found.
+    """
     try:
         chunk = vector_db.get_chunk(library_id, document_id, chunk_id)
+        logger.info(f"Retrieved chunk: {chunk_id} from document: {document_id}, library: {library_id}")
         return chunk
     except (LibraryNotFoundException, DocumentNotFoundException, ChunkNotFoundException) as e:
+        logger.error(f"Failed to retrieve chunk: {str(e)}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
+        logger.error(f"Unexpected error while retrieving chunk: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while retrieving the chunk")
 
 @router.put("/{library_id}/{document_id}/{chunk_id}", response_model=Chunk)
-async def update_chunk(library_id: str, document_id: str, chunk_id: str, chunk: Chunk, vector_db: VectorDatabase = Depends(get_vector_db)):
-    logger.info(f"Attempting to update chunk: library_id={library_id}, document_id={document_id}, chunk_id={chunk_id}")
+async def update_chunk(
+    library_id: str,
+    document_id: str,
+    chunk_id: str,
+    chunk_update: ChunkUpdate,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Chunk:
+    """
+    Update an existing chunk in a document within a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document containing the chunk.
+        chunk_id (str): The ID of the chunk to update.
+        chunk_update (ChunkUpdate): The updated chunk data.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Chunk: The updated chunk object.
+
+    Raises:
+        HTTPException: If the library, document, or chunk is not found, if there's an ID mismatch, or if there's an error updating the chunk.
+    """
     try:
         # First, check if the chunk exists
-        vector_db.get_chunk(library_id, document_id, chunk_id)
+        existing_chunk = vector_db.get_chunk(library_id, document_id, chunk_id)
         
         # If we get here, the chunk exists, so now we can check the ID match
-        if chunk.id != chunk_id:
-            logger.warning(f"Chunk ID mismatch: path={chunk_id}, body={chunk.id}")
-            raise HTTPException(status_code=400, detail=f"Chunk ID in path ({chunk_id}) does not match chunk ID in body ({chunk.id})")
-        
-        updated_chunk = vector_db.update_chunk(library_id, document_id, chunk_id, chunk)
-        logger.info(f"Successfully updated chunk: {chunk_id}")
-        return updated_chunk
-    except LibraryNotFoundException as e:
-        logger.error(f"Library not found: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except DocumentNotFoundException as e:
-        logger.error(f"Document not found: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except ChunkNotFoundException as e:
-        logger.error(f"Chunk not found: {str(e)}")
-        raise HTTPException(status_code=404, detail=str(e))
+        if chunk_id != chunk_update.id:
+            logger.error(f"Chunk ID mismatch: URL {chunk_id} != body {chunk_update.id}")
+            raise HTTPException(status_code=400, detail=f"Chunk ID in URL ({chunk_id}) does not match chunk ID in body ({chunk_update.id})")
+
+        updated_chunk = Chunk(**chunk_update.dict())
+        result = vector_db.update_chunk(library_id, document_id, chunk_id, updated_chunk)
+        logger.info(f"Chunk updated successfully: {chunk_id} in document: {document_id}, library: {library_id}")
+        return result
     except HTTPException as e:
-        logger.error(f"HTTP exception: {str(e)}")
+        # Re-raise HTTP exceptions (including our 400 for ID mismatch) without modifying them
         raise e
+    except (LibraryNotFoundException, DocumentNotFoundException, ChunkNotFoundException) as e:
+        logger.error(f"Failed to update chunk: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        logger.error(f"Invalid input for chunk update: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error occurred while updating chunk: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
-
-
+        logger.error(f"Unexpected error while updating chunk: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the chunk")
 
 @router.delete("/{library_id}/{document_id}/{chunk_id}")
-async def delete_chunk(library_id: str, document_id: str, chunk_id: str, vector_db: VectorDatabase = Depends(get_vector_db)):
+async def delete_chunk(
+    library_id: str,
+    document_id: str,
+    chunk_id: str,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Dict[str, str]:
+    """
+    Delete a chunk from a document within a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document containing the chunk.
+        chunk_id (str): The ID of the chunk to delete.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Dict[str, str]: A dictionary containing a success message.
+
+    Raises:
+        HTTPException: If the library, document, or chunk is not found, or there's an error deleting the chunk.
+    """
     try:
         vector_db.delete_chunk(library_id, document_id, chunk_id)
+        logger.info(f"Chunk deleted successfully: {chunk_id} from document: {document_id}, library: {library_id}")
         return {"message": f"Chunk {chunk_id} deleted successfully"}
     except (LibraryNotFoundException, DocumentNotFoundException, ChunkNotFoundException) as e:
+        logger.error(f"Failed to delete chunk: {str(e)}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Unexpected error while deleting chunk: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while deleting the chunk")

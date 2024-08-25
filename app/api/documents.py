@@ -1,71 +1,164 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.models.data_models import Document
+from typing import Dict, Any, List
+from pydantic import BaseModel, Field
+from app.models.data_models import Document, Chunk
 from app.core.database import VectorDatabase
 from app.api.dependencies import get_vector_db
-from app.core.exceptions import LibraryNotFoundException, DocumentNotFoundException, VectorDatabaseException
+from app.core.exceptions import LibraryNotFoundException, DocumentNotFoundException
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/{library_id}", response_model=Document)
-async def add_document(library_id: str, document: Document, vector_db: VectorDatabase = Depends(get_vector_db)):
-    logger.info(f"Received request to add document to library: {library_id}")
+class ChunkCreate(BaseModel):
+    id: str = Field(..., description="Unique identifier for the chunk")
+    text: str = Field(..., description="Text content of the chunk")
+    embedding: List[float] = Field(..., description="Vector embedding of the chunk")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the chunk")
+
+class DocumentCreate(BaseModel):
+    id: str = Field(..., description="Unique identifier for the document")
+    chunks: List[ChunkCreate] = Field(..., description="List of chunks in the document")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the document")
+
+class DocumentUpdate(BaseModel):
+    chunks: List[ChunkCreate] = Field(..., description="Updated list of chunks in the document")
+    metadata: Dict[str, Any] = Field(..., description="Updated metadata for the document")
+
+@router.post("/{library_id}", response_model=Document, status_code=201)
+async def add_document(
+    library_id: str,
+    document: DocumentCreate,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Document:
+    """
+    Add a new document to a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library to add the document to.
+        document (DocumentCreate): The document data to be added.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Document: The created document object.
+
+    Raises:
+        HTTPException: If the library is not found or there's an error adding the document.
+    """
     try:
-        vector_db.add_document(library_id, document)
-        logger.info(f"Document {document.id} added successfully to library: {library_id}")
-        return document
+        new_document = Document(
+            id=document.id,
+            chunks=[Chunk(**chunk.dict()) for chunk in document.chunks],
+            metadata=document.metadata
+        )
+        vector_db.add_document(library_id, new_document)
+        logger.info(f"Document added successfully: {document.id} to library: {library_id}")
+        return new_document
     except LibraryNotFoundException as e:
         logger.error(f"Failed to add document: {str(e)}")
-        raise e
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error while adding document: {str(e)}")
-        raise VectorDatabaseException(status_code=500, detail="An unexpected error occurred while adding the document")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while adding the document")
 
 @router.get("/{library_id}/{document_id}", response_model=Document)
-async def get_document(library_id: str, document_id: str, vector_db: VectorDatabase = Depends(get_vector_db)):
-    logger.info(f"Received request to get document: {document_id} from library: {library_id}")
+async def get_document(
+    library_id: str,
+    document_id: str,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Document:
+    """
+    Retrieve a document from a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document to retrieve.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Document: The requested document object.
+
+    Raises:
+        HTTPException: If the library or document is not found.
+    """
     try:
         document = vector_db.get_document(library_id, document_id)
         logger.info(f"Retrieved document: {document_id} from library: {library_id}")
         return document
     except (LibraryNotFoundException, DocumentNotFoundException) as e:
         logger.error(f"Failed to retrieve document: {str(e)}")
-        raise e
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error while retrieving document: {str(e)}")
-        raise VectorDatabaseException(status_code=500, detail="An unexpected error occurred while retrieving the document")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while retrieving the document")
 
 @router.put("/{library_id}/{document_id}", response_model=Document)
-async def update_document(library_id: str, document_id: str, document: Document, vector_db: VectorDatabase = Depends(get_vector_db)):
-    logger.info(f"Received request to update document: {document_id} in library: {library_id}")
+async def update_document(
+    library_id: str,
+    document_id: str,
+    document_update: DocumentUpdate,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Document:
+    """
+    Update an existing document in a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document to update.
+        document_update (DocumentUpdate): The updated document data.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Document: The updated document object.
+
+    Raises:
+        HTTPException: If the library or document is not found, or there's an error updating the document.
+    """
     try:
-        if document.id != document_id:
-            raise HTTPException(status_code=400, detail="Document ID in URL does not match payload")
-        updated_document = vector_db.update_document(library_id, document)
-        logger.info(f"Document {document_id} updated successfully in library: {library_id}")
-        return updated_document
+        existing_document = vector_db.get_document(library_id, document_id)
+        updated_document = Document(
+            id=document_id,
+            chunks=[Chunk(**chunk.dict()) for chunk in document_update.chunks],
+            metadata=document_update.metadata
+        )
+        updated = vector_db.update_document(library_id, updated_document)
+        logger.info(f"Document updated successfully: {document_id} in library: {library_id}")
+        return updated
     except (LibraryNotFoundException, DocumentNotFoundException) as e:
         logger.error(f"Failed to update document: {str(e)}")
-        raise e
-    except HTTPException as e:
-        logger.error(f"Bad request while updating document: {str(e)}")
-        raise e
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error while updating document: {str(e)}")
-        raise VectorDatabaseException(status_code=500, detail="An unexpected error occurred while updating the document")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the document")
 
 @router.delete("/{library_id}/{document_id}")
-async def delete_document(library_id: str, document_id: str, vector_db: VectorDatabase = Depends(get_vector_db)):
-    logger.info(f"Received request to delete document: {document_id} from library: {library_id}")
+async def delete_document(
+    library_id: str,
+    document_id: str,
+    vector_db: VectorDatabase = Depends(get_vector_db)
+) -> Dict[str, str]:
+    """
+    Delete a document from a library in the vector database.
+
+    Args:
+        library_id (str): The ID of the library containing the document.
+        document_id (str): The ID of the document to delete.
+        vector_db (VectorDatabase): The vector database instance (injected dependency).
+
+    Returns:
+        Dict[str, str]: A dictionary containing a success message.
+
+    Raises:
+        HTTPException: If the library or document is not found, or there's an error deleting the document.
+    """
     try:
         vector_db.delete_document(library_id, document_id)
-        logger.info(f"Document {document_id} deleted successfully from library: {library_id}")
+        logger.info(f"Document deleted successfully: {document_id} from library: {library_id}")
         return {"message": f"Document {document_id} deleted successfully from library {library_id}"}
     except (LibraryNotFoundException, DocumentNotFoundException) as e:
         logger.error(f"Failed to delete document: {str(e)}")
-        raise e
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Unexpected error while deleting document: {str(e)}")
-        raise VectorDatabaseException(status_code=500, detail="An unexpected error occurred while deleting the document")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while deleting the document")
