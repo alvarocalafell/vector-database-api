@@ -32,7 +32,7 @@ This project implements a high-performance REST API for a Vector Database using 
 ### Local Development
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/vector-database-api.git
+   git clone https://github.com/alvarocalafell/vector-database-api.git
    cd vector-database-api
    ```
 2. Create and activate a virtual environment:
@@ -179,4 +179,4 @@ In our implementation, we provide all three options to allow flexibility dependi
 By implementing these algorithms from scratch, we gain a deeper understanding of their workings and can fine-tune them specifically for our vector database use case. This approach also allows us to maintain full control over the implementation, enabling easier debugging and potential optimizations in the future.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License.
