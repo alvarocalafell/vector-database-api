@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from app.models.data_models import Chunk
@@ -59,7 +59,21 @@ async def list_chunks(
 async def create_chunk(
     library_id: str,
     document_id: str,
-    chunk: ChunkCreate,
+    chunk: ChunkCreate = Body(
+            {
+        "id": "chunk-2",
+        "text": "This is another test chunk",
+        "embedding": [
+            0.6,
+            0.7,
+            0.8,
+            0.9,
+            1.0
+        ],
+        "metadata": {
+            "position": 2
+        }
+    }),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Chunk:
     """
@@ -127,7 +141,21 @@ async def update_chunk(
     library_id: str,
     document_id: str,
     chunk_id: str,
-    chunk_update: ChunkUpdate,
+    chunk_update: ChunkUpdate = Body(
+            {
+        "id": "chunk-2",
+        "text": "This is an updated test chunk",
+        "embedding": [
+            0.6,
+            0.7,
+            0.8,
+            0.9,
+            1.0
+        ],
+        "metadata": {
+            "position": 2
+        }
+    }),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Chunk:
     """

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field, constr
 from app.models.data_models import Library
@@ -26,7 +26,14 @@ class LibraryUpdate(BaseModel):
 
 @router.post("/", response_model=Library, status_code=201)
 async def create_library(
-    library: LibraryCreate,
+    library: LibraryCreate = Body(
+        example ={
+            "id": "test-library",
+            "metadata": {
+                "name": "Test Library",
+                "description": "A test library"
+            }
+        }),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Library:
     """
@@ -102,7 +109,15 @@ async def get_library(
 @router.put("/{library_id}", response_model=Library)
 async def update_library(
     library_id: str,
-    library_update: LibraryUpdate,
+    library_update: LibraryUpdate = Body(
+                    {
+                "id": "test-library",
+                "documents": [],
+                "metadata": {
+                    "name": "Updated Test Library"
+                }
+            }
+        ),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Library:
     """

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from app.models.data_models import Document, Chunk
@@ -59,7 +59,22 @@ async def list_documents(
 @router.post("/{library_id}", response_model=Document, status_code=201)
 async def add_document(
     library_id: str,
-    document: DocumentCreate,
+    document: DocumentCreate = Body(
+        {
+        "id": "test-document",
+        "chunks": [
+            {
+                "id": "chunk-1",
+                "text": "This is a test chunk",
+                "embedding": [0.1, 0.2, 0.3, 0.4, 0.5],
+                "metadata": {"position": 1}
+            }
+        ],
+        "metadata": {
+            "name": "Test Document",
+            "author": "Test Author"
+        }
+    }),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Document:
     """
@@ -127,7 +142,29 @@ async def get_document(
 async def update_document(
     library_id: str,
     document_id: str,
-    document_update: DocumentUpdate,
+    document_update: DocumentUpdate = Body(
+            {
+        "id": "test-document",
+        "chunks": [
+            {
+                "id": "chunk-1",
+                "text": "This is an updated test chunk",
+                "embedding": [
+                    0.1,
+                    0.2,
+                    0.3,
+                    0.4,
+                    0.5
+                ],
+                "metadata": {
+                    "position": 1
+                }
+            }
+        ],
+        "metadata": {
+            "author": "Updated Test Author"
+        }
+    }),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> Document:
     """

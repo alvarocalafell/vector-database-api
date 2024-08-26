@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from typing import List, Dict
 from app.models.data_models import SearchQuery, SearchResult
 from app.core.database import VectorDatabase
@@ -25,7 +25,10 @@ async def list_search_methods():
 @router.post("/{library_id}/knn", response_model=List[SearchResult])
 async def knn_search(
     library_id: str,
-    search_query: SearchQuery,
+    search_query: SearchQuery = Body(
+        {
+        "query_vector": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "k": 2}),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> List[SearchResult]:
     """
@@ -62,7 +65,10 @@ async def knn_search(
 @router.post("/{library_id}/cosine", response_model=List[SearchResult])
 async def cosine_similarity_search(
     library_id: str,
-    search_query: SearchQuery,
+    search_query: SearchQuery = Body(
+        {
+        "query_vector": [0.1, 0.2, 0.3, 0.4, 0.5],
+        "k": 2}),
     vector_db: VectorDatabase = Depends(get_vector_db())
 ) -> List[SearchResult]:
     """

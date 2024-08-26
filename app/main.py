@@ -62,23 +62,92 @@ def create_app() -> FastAPI:
     async def root():
         logger.info("Serving root endpoint")
         return """
-        <html>
-            <head>
-                <title>Vector Database API</title>
-            </head>
-            <body>
-                <h1>Welcome to the Vector Database API</h1>
-                <p>This API provides functionality for managing and searching vector embeddings.</p>
-                <h2>Available Endpoints:</h2>
-                <ul>
-                    <li><a href="/docs">/docs</a> - Interactive API documentation</li>
-                    <li><a href="/redoc">/redoc</a> - Alternative API documentation</li>
-                    <li>/api/v1/libraries - Manage libraries</li>
-                    <li>/api/v1/documents - Manage documents</li>
-                    <li>/api/v1/chunks - Manage chunks</li>
-                    <li>/api/v1/search - Perform vector searches</li>
-                </ul>
-            </body>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Vector Database API</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background-color: #f5f5f5;
+                }
+                h1 {
+                    font-size: 2.5em;
+                    color: #1a1a1a;
+                    margin-bottom: 20px;
+                }
+                h2 {
+                    font-size: 1.8em;
+                    color: #4a4a4a;
+                    margin-top: 30px;
+                }
+                p {
+                    margin-bottom: 20px;
+                }
+                .highlight {
+                    color: #4758FF;
+                    font-weight: bold;
+                }
+                ul {
+                    list-style-type: none;
+                    padding: 0;
+                }
+                li {
+                    margin-bottom: 10px;
+                }
+                a {
+                    color: #4758FF;
+                    text-decoration: none;
+                }
+                a:hover {
+                    text-decoration: underline;
+                }
+                .cta-button {
+                    display: inline-block;
+                    background-color: #4758FF;
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    margin-top: 20px;
+                }
+                .cta-button:hover {
+                    background-color: #3a46cc;
+                    text-decoration: none;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Welcome to the <span class="highlight">Vector Database API</span></h1>
+            <p>Augment your applications with powerful vector search capabilities. Automate data operations and make your organization smarter.</p>
+            
+            <h2>Key Features:</h2>
+            <ul>
+                <li>🚀 High-performance vector indexing and search</li>
+                <li>📚 Efficient document and chunk management</li>
+                <li>🔍 Advanced similarity search algorithms</li>
+                <li>🔧 Flexible API for seamless integration</li>
+            </ul>
+            
+            <h2>Available Endpoints:</h2>
+            <ul>
+                <li><a href="/docs">/docs</a> - Interactive API documentation</li>
+                <li><a href="/redoc">/redoc</a> - Alternative API documentation</li>
+                <li><a href="/api/v1/libraries">/api/v1/libraries</a> - Manage libraries</li>
+                <li><a href="/api/v1/documents">/api/v1/documents</a> - Manage documents</li>
+                <li><a href="/api/v1/chunks">/api/v1/chunks</a> - Manage chunks</li>
+                <li><a href="/api/v1/search">/api/v1/search</a> - Perform vector searches</li>
+            </ul>
+            
+            <a href="/docs" class="cta-button">Get Started</a>
+        </body>
         </html>
         """
     
